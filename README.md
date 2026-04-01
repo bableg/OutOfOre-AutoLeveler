@@ -1,5 +1,6 @@
 # OutOfOre-AutoLeveler
 **External GPS Autopilot and Blade Stabilization tool for Out of Ore (v0.34)**
+** https://youtu.be/cilwSmtzddM **
 
 ---
 
@@ -37,6 +38,7 @@ This is an external automation tool that provides advanced blade stabilization a
 ---
 
 ## 🛠️ Setup & Installation
+
 1. Install [Python 3.10+](https://www.python.org/).
 2. Install dependencies: `pip install pymem keyboard`
 3. Set in-game blade controls: **Num 8/2 (Up/Down)** and **Num 4/6 (Tilt)**.
