@@ -4,15 +4,16 @@
 
 ---
 
-## 🛠 v1.03 - Update Notes
+## 🛠 v1.04 - Update Notes
 This version introduces significant quality-of-life improvements and a brand-new visual interface for a more professional excavating experience.
 
 ### **What's New?**
-* **External GUI Overlay:** A dedicated, transparent on-screen display (HUD) has been added.
-    > **⚠️ Note:** For the overlay to function correctly, please set your game to **Windowed Borderless** mode.
-* **Persistent Logic:** Targets for Pitch and Roll are now preserved in memory after pressing **F4 (Reset)**, allowing for quicker recalibration during complex maneuvers.
-* **Emergency Stop Refactor:** The `ESC` key functionality has been redesigned for a smoother script termination process.
-* **Performance Optimizations:** Under-the-hood refinements to memory polling frequency and CPU usage.
+* **Modernized Control Panel:** The user interface has been completely redesigned, allowing you to track real-time telemetry data (Roll, Pitch, Depth) and manage settings dynamically from a single screen.
+* **Screen Reading (OCR Fallback):** : Added a built-in OCR engine to automatically scan and detect depth directly from the game screen, serving as a reliable backup if memory reading fails due to changing pointers on certain hardware profiles.
+* ⚠️ Note: This feature can be easily toggled on or off via the new settings panel depending on your technical needs.
+* **Dynamic Sensitivity Controls:** Introduced adjustable sliders for Angle Tolerance, GPS Depth Tolerance, and a Reaction Speed Multiplier to perfectly match your vehicle's behavior to your PC's performance or in-game latency.
+* **Smart F4 Pause/Resume:** The F4 key now features toggle logic. Pressing it once pauses the autopilot, and pressing it again instantly resumes operations with all your target configurations and active modes fully intact.
+* **Re-detect Game Utility:** Added a dedicated button to instantly refresh and re-establish the memory connection, eliminating the need to restart the application after game crashes or server swaps.
 
 ### **Credits**
 Special thanks to our community on **Reddit, Discord, and YouTube** for the feedback and suggestions that made this update possible! 🥂
