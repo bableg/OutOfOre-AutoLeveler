@@ -1,2 +1,9 @@
 pymem
 keyboard
+mss
+numpy
+opencv-python
+easyocr
+--index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
