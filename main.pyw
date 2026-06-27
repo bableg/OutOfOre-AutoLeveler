@@ -5,27 +5,31 @@ import time
 import os
 import sys
 import ctypes
+import json
 import tkinter as tk
 from tkinter import ttk
-import mss
-import numpy as np
-import cv2
 import webbrowser
-import contextlib
 
 # --- APP INFO ---
-VERSION = "1.04"
+VERSION = "1.05"
 GITHUB_URL = "https://github.com/bableg/OutOfOre-AutoLeveler"
 PROCESS_NAME = "OutOfOre-Win64-Shipping.exe"
 
-# --- MEMORY OFFSETS ---
-BASE_GPS = 0x05901438
-OFFSETS_GPS = [0xF8, 0x48, 0x50, 0xC0, 0x350, 0x260, 0x9C] 
-BASE_ANGLE = 0x05D8B018 
-OFFSETS_ANGLE = [0x10, 0x110, 0x258, 0x870, 0x2F0, 0x260, 0xF8] 
-OFFSETS_PITCH = [0x10, 0x110, 0x258, 0x870, 0x2F0, 0x260, 0x118] 
+# --- CONFIG PATH ---
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_FILE = os.path.join(BASE_DIR, "autolevel_config.json")
 
-KEYS = {"LEFT": 0x4B, "RIGHT": 0x4D, "UP": 0x48, "DOWN": 0x50} 
+# --- MEMORY OFFSETS ---
+
+BASE_ANGLE = 0x05D8B018
+OFFSETS_ANGLE = [0x10, 0x110, 0x258, 0x870, 0x2F0, 0x260, 0xF8]
+OFFSETS_PITCH = [0x10, 0x110, 0x258, 0x870, 0x2F0, 0x260, 0x118]
+OFFSETS_GPS = [0x10, 0x110, 0x258, 0x870, 0x2F0, 0x260, 0x128]
+
+KEYS = {"LEFT": 0x4B, "RIGHT": 0x4D, "UP": 0x48, "DOWN": 0x50}
 user32 = ctypes.windll.user32
 
 def send_key(scancode, duration):
@@ -33,44 +37,27 @@ def send_key(scancode, duration):
         user32.keybd_event(0, scancode, 0x0008, 0)
         time.sleep(duration)
         user32.keybd_event(0, scancode, 0x0008 | 0x0002, 0)
-    except: pass
-
-# --- SCREEN READING SETUP ---
-class ScreenReader:
-    def __init__(self):
-        self.monitor = {"top": 70, "left": 730, "width": 100, "height": 40}
-        import easyocr
-        with open(os.devnull, 'w') as f, contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
-            self.reader = easyocr.Reader(['en'], gpu=False)
-
-    def get_depth(self):
-        with mss.MSS() as sct:
-            img = np.array(sct.grab(self.monitor))
-            gray = cv2.cvtColor(img, cv2.COLOR_BGRA2GRAY)
-            import easyocr
-            result = self.reader.readtext(gray, detail=0)
-            if result:
-                text = result[0].replace(',', '').replace('cm', '')
-                try: return float(text)
-                except: return None
-        return None
+    except:
+        pass
 
 # --- UI SETUP ---
 class MainUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title(f"AutoLeveler Control Panel v{VERSION}")
-        self.root.geometry("400x530") 
+        self.root.geometry("400x520")
         self.root.attributes("-topmost", True)
         
-        self.ocr_enabled = tk.BooleanVar(value=False)
-        self.angle_tol = tk.DoubleVar(value=0.10)
-        self.gps_tol = tk.DoubleVar(value=0.50)
-        self.speed_mult = tk.DoubleVar(value=1.0)
+        # Load Config
+        self.config = self.load_config()
+        
+        self.angle_tol = tk.DoubleVar(value=self.config.get("angle_tol", 0.10))
+        self.gps_tol = tk.DoubleVar(value=self.config.get("gps_tol", 0.50))
+        self.speed_mult = tk.DoubleVar(value=self.config.get("speed_mult", 1.0))
         
         self.setup_control_panel()
 
-        # In-Game Overlay
+        # In-Game Overlay (Top-Left)
         self.overlay = tk.Toplevel(self.root)
         self.overlay.overrideredirect(True)
         self.overlay.attributes("-topmost", True)
@@ -86,6 +73,28 @@ class MainUI:
         hwnd = ctypes.windll.user32.GetParent(self.overlay.winfo_id())
         style = ctypes.windll.user32.GetWindowLongW(hwnd, -20)
         ctypes.windll.user32.SetWindowLongW(hwnd, -20, style | 0x80000 | 0x20)
+
+    def load_config(self):
+        if os.path.exists(CONFIG_FILE):
+            try:
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except:
+                pass
+        return {}
+
+    def save_settings(self):
+        config_data = {
+            "angle_tol": self.angle_tol.get(),
+            "gps_tol": self.gps_tol.get(),
+            "speed_mult": self.speed_mult.get()
+        }
+        try:
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(config_data, f, indent=4)
+            self.lbl_status.config(text="Status: SETTINGS SAVED ✓", foreground="blue")
+        except:
+            self.lbl_status.config(text="Status: FAILED TO SAVE!", foreground="red")
 
     def setup_control_panel(self):
         style = ttk.Style()
@@ -112,34 +121,35 @@ class MainUI:
         self.lbl_data = ttk.Label(frame_tel, text="Roll: 0.00 | Pitch: 0.00\nDepth: 0", justify="left", font=("Consolas", 10))
         self.lbl_data.pack(anchor="w", padx=5, pady=5)
 
-        # Settings Frame
+        # Settings Frame (Sliders)
         frame_set = ttk.LabelFrame(self.root, text=" Settings ")
         frame_set.pack(padx=10, pady=5, fill="both", expand=True)
 
-        chk_ocr = ttk.Checkbutton(frame_set, text="Enable Screen Reading (OCR Fallback)", variable=self.ocr_enabled)
-        chk_ocr.pack(anchor="w", padx=5, pady=8)
-
-        ttk.Label(frame_set, text="Angle Tolerance:").pack(anchor="w", padx=5)
+        ttk.Label(frame_set, text="Angle Tolerance:").pack(anchor="w", padx=5, pady=(8, 0))
         self.scale_angle = ttk.Scale(frame_set, from_=0.01, to=0.50, variable=self.angle_tol, orient="horizontal")
         self.scale_angle.pack(fill="x", padx=5, pady=2)
-        self.lbl_angle_val = ttk.Label(frame_set, text="0.10")
+        self.lbl_angle_val = ttk.Label(frame_set, text=f"{self.angle_tol.get():.2f}")
         self.lbl_angle_val.pack(anchor="e", padx=5)
 
         ttk.Label(frame_set, text="GPS Depth Tolerance:").pack(anchor="w", padx=5)
         self.scale_gps = ttk.Scale(frame_set, from_=0.1, to=5.0, variable=self.gps_tol, orient="horizontal")
         self.scale_gps.pack(fill="x", padx=5, pady=2)
-        self.lbl_gps_val = ttk.Label(frame_set, text="0.50")
+        self.lbl_gps_val = ttk.Label(frame_set, text=f"{self.gps_tol.get():.2f}")
         self.lbl_gps_val.pack(anchor="e", padx=5)
 
         ttk.Label(frame_set, text="Reaction Speed (Multiplier):").pack(anchor="w", padx=5)
         self.scale_speed = ttk.Scale(frame_set, from_=0.1, to=3.0, variable=self.speed_mult, orient="horizontal")
         self.scale_speed.pack(fill="x", padx=5, pady=2)
-        self.lbl_speed_val = ttk.Label(frame_set, text="1.00x")
+        self.lbl_speed_val = ttk.Label(frame_set, text=f"{self.speed_mult.get():.2f}x")
         self.lbl_speed_val.pack(anchor="e", padx=5)
 
         self.scale_angle.configure(command=lambda e: self.lbl_angle_val.config(text=f"{self.angle_tol.get():.2f}"))
         self.scale_gps.configure(command=lambda e: self.lbl_gps_val.config(text=f"{self.gps_tol.get():.2f}"))
         self.scale_speed.configure(command=lambda e: self.lbl_speed_val.config(text=f"{self.speed_mult.get():.2f}x"))
+
+        # Save Button
+        self.btn_save = ttk.Button(frame_set, text="💾 Save Settings", command=self.save_settings)
+        self.btn_save.pack(pady=10)
 
         # --- BRANDING & LINKS ---
         frame_brand = ttk.Frame(self.root)
@@ -160,7 +170,9 @@ class MainUI:
         self.canvas.itemconfig(self.text, text=text_content)
 
     def update_panel(self, status, mode, telemetry_text, is_connected):
-        self.lbl_status.config(text=status, foreground="green" if is_connected else "red")
+        if "SAVED" not in self.lbl_status.cget("text") and "FAILED" not in self.lbl_status.cget("text"):
+            self.lbl_status.config(text=status, foreground="green" if is_connected else "red")
+        
         self.lbl_mode.config(text=f"Mode: {mode}")
         self.lbl_data.config(text=telemetry_text)
 
@@ -168,7 +180,6 @@ class MainUI:
 class AutoPilot:
     def __init__(self, ui):
         self.ui = ui
-        self.sr = ScreenReader()
         self.pm = None
         self.module_base = None
         self.mode_list = ["OFF", "GPS_LEVEL", "FULL_AUTO", "SEMI_AUTO"]
@@ -185,16 +196,17 @@ class AutoPilot:
             self.pm = pymem.Pymem(PROCESS_NAME)
             self.module_base = pymem.process.module_from_name(self.pm.process_handle, PROCESS_NAME).lpBaseOfDll
             self.is_connected = True
+            self.ui.lbl_status.config(text="Status: CONNECTED", foreground="green") # Reset save msg
             return True
         except: 
             self.is_connected = False
             return False
 
     def force_reconnect(self):
-        """ Butona basıldığında veya manuel tetiklendiğinde hafıza bağlantısını sıfırlayıp tekrar dener """
         self.is_connected = False
         self.pm = None
         self.module_base = None
+        self.ui.lbl_status.config(text="Status: RE-DETECTING...", foreground="orange")
         self.connect()
 
     def get_addr(self, base_offset, offsets):
@@ -221,7 +233,7 @@ class AutoPilot:
 
         addr_roll = self.get_addr(BASE_ANGLE, OFFSETS_ANGLE)
         addr_pitch = self.get_addr(BASE_ANGLE, OFFSETS_PITCH)
-        addr_gps = self.get_addr(BASE_GPS, OFFSETS_GPS)
+        addr_gps = self.get_addr(BASE_ANGLE, OFFSETS_GPS)
 
         if keyboard.is_pressed('f9'):
             self.mode_idx = (self.mode_idx + 1) % len(self.mode_list)
@@ -250,10 +262,7 @@ class AutoPilot:
                 except: pass
             
             if cur_g is None or cur_g == 0:
-                if self.ui.ocr_enabled.get():
-                    cur_g = self.sr.get_depth() or self.last_valid_gps
-                else:
-                    cur_g = self.last_valid_gps
+                cur_g = self.last_valid_gps
             else:
                 self.last_valid_gps = cur_g
 
