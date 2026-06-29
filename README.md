@@ -2,18 +2,22 @@
 **External GPS Autopilot and Blade Stabilization tool for Out of Ore (v0.34)**
 ** https://youtu.be/cilwSmtzddM **
 
+
+# Bug/Issue Report Fields
+** https://forms.gle/uJXVijAVdGtuCRPg7 **
+
 ---
 
-## 🛠 v1.04 - Update Notes
-This version introduces significant quality-of-life improvements and a brand-new visual interface for a more professional excavating experience.
+## 🛠 v1.05 - Update Notes
 
-### **What's New?**
-* **Modernized Control Panel:** The user interface has been completely redesigned, allowing you to track real-time telemetry data (Roll, Pitch, Depth) and manage settings dynamically from a single screen.
-* **Screen Reading (OCR Fallback):** : Added a built-in OCR engine to automatically scan and detect depth directly from the game screen, serving as a reliable backup if memory reading fails due to changing pointers on certain hardware profiles.
-* ⚠️ Note: This feature can be easily toggled on or off via the new settings panel depending on your technical needs.
-* **Dynamic Sensitivity Controls:** Introduced adjustable sliders for Angle Tolerance, GPS Depth Tolerance, and a Reaction Speed Multiplier to perfectly match your vehicle's behavior to your PC's performance or in-game latency.
-* **Smart F4 Pause/Resume:** The F4 key now features toggle logic. Pressing it once pauses the autopilot, and pressing it again instantly resumes operations with all your target configurations and active modes fully intact.
-* **Re-detect Game Utility:** Added a dedicated button to instantly refresh and re-establish the memory connection, eliminating the need to restart the application after game crashes or server swaps.
+### **What's New in v1.05? **
+* **Optimized Performance: Removed the OCR (Screen Reading) and telemetry scanning features. This change significantly reduces the application's memory footprint, decreases overall file size, and ensures a more stable, lightweight operation.
+* **GUI Enhancements: Implemented various interface refinements and visual adjustments to improve navigation and overall user experience.
+
+  
+ ### **⚠️ Known Issues **
+* **Depth and Angle Reading Errors: Users on Windows 11 and systems with specific "Memory Integrity" (Core Isolation) settings enabled may experience issues with depth and angle readings.
+  
 
 ### **Credits**
 Special thanks to our community on **Reddit, Discord, and YouTube** for the feedback and suggestions that made this update possible! 🥂
